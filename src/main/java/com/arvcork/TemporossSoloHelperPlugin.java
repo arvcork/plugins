@@ -1,6 +1,8 @@
 package com.arvcork;
 
+import com.arvcork.managers.TemporossEquipmentManager;
 import com.arvcork.managers.TemporossManager;
+import com.arvcork.overlays.TemporossUnkahOverlay;
 import com.google.inject.Provides;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +15,7 @@ import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.ui.overlay.OverlayManager;
 
 @Slf4j
 @PluginDescriptor(
@@ -26,11 +29,22 @@ public class TemporossSoloHelperPlugin extends Plugin
 
     public static final int TEMPOROSS_REGION_ID = 12078;
 
+    public static final int UNKAH_REGION_ID = 12588;
+
     @Inject
     private Client client;
 
     @Inject
     private TemporossManager temporossManager;
+
+    @Inject
+    private OverlayManager overlayManager;
+
+    @Inject
+    private TemporossEquipmentManager temporossEquipmentManager;
+
+    @Inject
+    private TemporossUnkahOverlay temporossUnkahOverlay;
 
     @Inject
     private TemporossSoloHelperConfig config;
@@ -48,12 +62,28 @@ public class TemporossSoloHelperPlugin extends Plugin
     protected void startUp() throws Exception
     {
         eventBus.register(temporossManager);
+        eventBus.register(temporossEquipmentManager);
     }
 
     @Override
     protected void shutDown() throws Exception
     {
         eventBus.unregister(temporossManager);
+        eventBus.unregister(temporossEquipmentManager);
+    }
+
+    @Subscribe
+    public void onGameStateChanged(GameStateChanged event)
+    {
+        if (event.getGameState() != GameState.LOGGED_IN)
+        {
+            return;
+        }
+
+        if (this.isInUnkahRegion())
+        {
+            overlayManager.add(temporossUnkahOverlay);
+        }
     }
 
     /**
@@ -62,6 +92,14 @@ public class TemporossSoloHelperPlugin extends Plugin
     public boolean isInTemporossArea()
     {
         return isInRegion(TEMPOROSS_REGION_ID);
+    }
+
+    /**
+     * Determine if the player is within the Unkah region.
+     */
+    public boolean isInUnkahRegion()
+    {
+        return isInRegion(UNKAH_REGION_ID);
     }
 
     /**
