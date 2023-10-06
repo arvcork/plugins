@@ -1,79 +1,64 @@
 package com.arvcork.interrupts;
 
-import com.arvcork.TemporossSoloHelperPlugin;
-import com.arvcork.managers.TemporossStateManager;
-import net.runelite.api.Actor;
+import com.arvcork.TemporossActivity;
+import com.arvcork.events.TemporossActivityChanged;
+import com.arvcork.events.TemporossEvent;
 import net.runelite.api.Client;
-import net.runelite.api.NPC;
-import net.runelite.api.Player;
-import net.runelite.api.events.AnimationChanged;
-import net.runelite.api.events.GameTick;
-import net.runelite.client.eventbus.EventBus;
+import net.runelite.api.InventoryID;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.ItemID;
 import net.runelite.client.eventbus.Subscribe;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
-import java.util.Arrays;
 
-@Singleton
-public class StormIntensityInterrupt {
-    @Inject
-    private TemporossStateManager temporossManager;
-
-    @Inject
-    private TemporossSoloHelperPlugin plugin;
-
-    @Inject
-    private EventBus eventBus;
-
+public class StormIntensityInterrupt extends BaseInterrupt {
     @Inject
     private Client client;
 
-    public boolean hasTriggered;
+    @Override
+    protected InterruptType getInterruptType() {
+        return InterruptType.StormIntensityWarning;
+    }
 
     @Subscribe
-    public void onGameTick(GameTick event)
+    private void onTemporossEvent(TemporossEvent temporossEvent)
     {
-        if (plugin.isInTemporossArea())
+        if (temporossEvent.getEventId() == TemporossEvent.STORM_EXCEEDED_MAXIMUM)
         {
-            int stormIntensity = this.temporossManager.getStormIntensity();
+            this.interrupt();
+        }
 
-            if (stormIntensity >= 90 && ! this.hasTriggered)
-            {
-                this.hasTriggered = true;
-                eventBus.post(new Interrupt("Load fish into the Ammunition Crate."));
-            }
-
-            if (this.hasTriggered && stormIntensity < 90)
-            {
-                this.hasTriggered = false;
-            }
+        if (temporossEvent.getEventId() == TemporossEvent.STORM_OK)
+        {
+            this.clear();
         }
     }
 
     @Subscribe
-    public void onAnimationChanged(AnimationChanged event)
+    private void onTemporossActivityChanged(TemporossActivityChanged event)
     {
-        if (! this.plugin.isInTemporossArea())
+        if (event.getActivity() != TemporossActivity.StockingCannon && this.temporossSession.getCurrentTemporossEvent() == TemporossEvent.STORM_EXCEEDED_MAXIMUM)
         {
-            return;
+            this.interrupt();
         }
+    }
 
-        Player player = this.client.getLocalPlayer();
+    @Override
+    protected boolean shouldInterrupt() {
+        ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
 
-        if (event.getActor() == player)
+        if (itemContainer != null)
         {
-            Actor interactingWith = player.getInteracting();
+            int fish = itemContainer.count(ItemID.RAW_HARPOONFISH);
+            int cooked = itemContainer.count(ItemID.HARPOONFISH);
 
-            if (interactingWith instanceof NPC)
+            // We only want to show this if there's a point (the player has some fish which can do damage).
+            if ((fish > 0 || cooked > 0) && this.temporossSession.getCurrentActivity() != TemporossActivity.StockingCannon)
             {
-                NPC npc = (NPC) interactingWith;
-
-                if (this.hasTriggered && Arrays.binarySearch(TemporossSoloHelperPlugin.TEMPOROSS_AMMUNITION_CRATES, npc.getId()) >= 0)
-                {
-                    eventBus.post(new ClearInterrupt());
-                }
+                return true;
             }
         }
+
+        return this.temporossSession.getCurrentActivity() != TemporossActivity.StockingCannon;
     }
 }

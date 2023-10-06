@@ -1,86 +1,78 @@
 package com.arvcork.interrupts;
 
-import com.arvcork.TemporossSoloHelperPlugin;
+import com.arvcork.TemporossActivity;
+import com.arvcork.events.TemporossActivityChanged;
+import com.arvcork.events.TemporossEvent;
 import lombok.extern.slf4j.Slf4j;
-import net.runelite.api.*;
-import net.runelite.api.events.*;
-import net.runelite.client.eventbus.EventBus;
+import net.runelite.api.Client;
+import net.runelite.api.InventoryID;
+import net.runelite.api.ItemContainer;
 import net.runelite.client.eventbus.Subscribe;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.Arrays;
 
 @Slf4j
 @Singleton
-public class DoubleFishSpotInterrupt {
-    @Inject
-    private TemporossSoloHelperPlugin plugin;
-
+public class DoubleFishSpotInterrupt extends BaseInterrupt {
     @Inject
     private Client client;
 
-    @Inject
-    private EventBus eventBus;
+    private boolean isSpawned;
 
-    private boolean hasTriggered;
 
     @Subscribe
-    public void onNpcSpawned(NpcSpawned npcSpawned)
+    public void onTemporossEvent(TemporossEvent event)
     {
-        // TODO: If this is max xp we always want to trigger.
-
-        if (NpcID.FISHING_SPOT_10569 == npcSpawned.getNpc().getId())
+        if (event.getEventId() == TemporossEvent.DOUBLE_FISHING_SPOT_SPAWNED)
         {
-            this.hasTriggered = true;
-            eventBus.post(new Interrupt("Fish at the double fishing spot."));
+            this.isSpawned = true;
+            this.interrupt();
+        }
+
+        if (event.getEventId() == TemporossEvent.DOUBLE_FISHING_SPOT_DESPAWNED)
+        {
+            this.isSpawned = false;
+            this.clear();
         }
     }
 
     @Subscribe
-    public void onNpcDespawned(NpcDespawned npcDespawned)
+    public void onTemporossActivityChanged(TemporossActivityChanged event)
     {
-        if (this.hasTriggered && NpcID.FISHING_SPOT_10569 == npcDespawned.getNpc().getId())
+        if (event.getActivity() == TemporossActivity.FishingDoubleSpot)
         {
-            this.hasTriggered = false;
-            eventBus.post(new ClearInterrupt());
+            this.clear();
+            return;
+        }
+
+        if (event.getActivity() == TemporossActivity.Idle && this.isSpawned)
+        {
+            this.interrupt();
         }
     }
 
-    @Subscribe
-    public void onInteractingChanged(InteractingChanged event)
+    @Override
+    protected InterruptType getInterruptType() {
+        return InterruptType.DoubleFishingSpot;
+    }
+
+    /**
+     * Determine if the interrupt should actually run.
+     */
+    @Override
+    protected boolean shouldInterrupt()
     {
-        if (! this.plugin.isInTemporossArea())
+        ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
+
+        // If there's less than 3 inventory spaces left, there's no point in interrupting the player.
+        if (itemContainer != null && itemContainer.count() > 25)
         {
-            return;
+            return false;
         }
 
-        final Actor target = event.getTarget();
-
-        if (target == null && this.hasTriggered)
-        {
-            eventBus.post(new Interrupt("Fish at the double fishing spot."));
-        }
-
-        if (target == null && ! this.hasTriggered)
-        {
-            return;
-        }
-
-        Player player = this.client.getLocalPlayer();
-
-        if (event.getSource() != player)
-        {
-            return;
-        }
-
-        final NPC npc = (NPC) target;
-
-//        log.debug("The distance away to the fishing spot is: " + event.getTarget().getLocalLocation().distanceTo(client.getLocalPlayer().getLocalLocation()));
-
-        if (npc.getId() == NpcID.FISHING_SPOT_10569 && this.hasTriggered)
-        {
-            eventBus.post(new ClearInterrupt());
-        }
+        return this.temporossSession.getCurrentActivity() != TemporossActivity.FishingDoubleSpot
+                && this.temporossSession.getCurrentActivity() != TemporossActivity.TetheringMast
+                && this.temporossSession.getCurrentActivity() != TemporossActivity.StockingCannon;
     }
 }

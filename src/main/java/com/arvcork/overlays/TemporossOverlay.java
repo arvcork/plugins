@@ -1,7 +1,7 @@
 package com.arvcork.overlays;
 
 import com.arvcork.TemporossSession;
-import com.arvcork.managers.TemporossSequenceManager;
+import com.arvcork.interrupts.InterruptType;
 import com.arvcork.utils.OverlayUtils;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayPosition;
@@ -9,13 +9,9 @@ import net.runelite.client.ui.overlay.components.PanelComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 import java.awt.*;
 
 public class TemporossOverlay extends Overlay {
-    @Inject
-    private TemporossSequenceManager temporossSequenceManager;
-
     @Inject
     private TemporossSession temporossSession;
 
@@ -40,20 +36,31 @@ public class TemporossOverlay extends Overlay {
                 new Dimension(graphics.getFontMetrics().stringWidth(OVERLAY_TITLE) + 150, 0)
         );
 
-//        if (this.temporossSequenceManager.getInterrupt() != null)
-//        {
-//            OverlayUtils.renderErrorMessage(panelComponent, this.temporossSequenceManager.getInterrupt());
-//
-//            return panelComponent.render(graphics);
-//        }
-
-        if (temporossSession.getCurrentActivity() != null)
+        if (this.temporossSession.isInterrupted())
         {
-            OverlayUtils.renderSuccessMessage(panelComponent, temporossSession.getCurrentActivity().toString());
+            OverlayUtils.renderErrorMessage(panelComponent, this.parseInterruptTypeToString(this.temporossSession.getCurrentInterrupt()));
         } else {
-            OverlayUtils.renderSuccessMessage(panelComponent, "Waiting for the player to do something.");
+            OverlayUtils.renderSuccessMessage(panelComponent, "Waiting for a interrupt to happen.");
         }
 
         return panelComponent.render(graphics);
+    }
+
+    /**
+     * Convert the interrupt type to a string for the player to be notified of.
+     */
+    private String parseInterruptTypeToString(InterruptType interruptType)
+    {
+        if (interruptType == InterruptType.DoubleFishingSpot)
+        {
+            return "Fish at the double fishing spot";
+        }
+
+        if (interruptType == InterruptType.TetherToTotemPole)
+        {
+            return "Tether to the Totem Pole";
+        }
+
+        return null;
     }
 }

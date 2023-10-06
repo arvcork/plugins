@@ -1,21 +1,22 @@
 package com.arvcork;
 
+import com.arvcork.events.InterruptSequence;
+import com.arvcork.events.ResumeSequence;
 import com.arvcork.events.TemporossActivityChanged;
+import com.arvcork.events.TemporossEvent;
+import com.arvcork.interrupts.InterruptType;
 import com.arvcork.utils.NpcUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.coords.LocalPoint;
-import net.runelite.api.events.AnimationChanged;
-import net.runelite.api.events.ChatMessage;
-import net.runelite.api.events.InteractingChanged;
+import net.runelite.api.events.*;
 import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.util.Text;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.Arrays;
 
 @Slf4j
 @Singleton
@@ -33,6 +34,12 @@ public class TemporossSession {
     @Getter
     private TemporossActivity currentActivity = TemporossActivity.Idle;
 
+    @Getter
+    private InterruptType currentInterrupt;
+
+    @Getter
+    private int currentTemporossEvent;
+
     private TemporossActivity previousActivity = TemporossActivity.Idle;
 
     /**
@@ -48,9 +55,10 @@ public class TemporossSession {
 
         String message = Text.standardize(chatMessage.getMessage());
 
-        log.debug("This is the chat message: " + message);
-        log.debug("This is the tether message: " + TemporossMessage.TETHER);
-        log.debug("This is the result: " + message.contains(TemporossMessage.TETHER));
+        if (message.contains(TemporossMessage.WAVE_INCOMING))
+        {
+            this.updateTemporossEvent(TemporossEvent.WAVE_INCOMING);
+        }
 
         if (message.contains(TemporossMessage.TETHER))
         {
@@ -59,6 +67,7 @@ public class TemporossSession {
 
         if (message.contains(TemporossMessage.UNTETHER) || message.contains(TemporossMessage.WAVE_FAILED) || message.contains(TemporossMessage.TETHER_SUCCESS))
         {
+            this.updateTemporossEvent(TemporossEvent.WAVE_GONE);
             this.setCurrentActivity(TemporossActivity.Idle);
         }
     }
@@ -148,6 +157,71 @@ public class TemporossSession {
         {
             this.setCurrentActivity(TemporossActivity.StockingCannon);
         }
+    }
+
+    @Subscribe
+    public void onNpcSpawned(NpcSpawned event)
+    {
+        if (event.getNpc().getId() == NpcID.FISHING_SPOT_10569)
+        {
+            this.updateTemporossEvent(TemporossEvent.DOUBLE_FISHING_SPOT_SPAWNED);
+        }
+    }
+
+    @Subscribe
+    public void onNpcDespawned(NpcDespawned event)
+    {
+        if (event.getNpc().getId() == NpcID.FISHING_SPOT_10569)
+        {
+            this.updateTemporossEvent(TemporossEvent.DOUBLE_FISHING_SPOT_DESPAWNED);
+        }
+    }
+
+    @Subscribe
+    private void onInterruptSequence(InterruptSequence event)
+    {
+        this.currentInterrupt = event.getType();
+    }
+
+    @Subscribe
+    private void onResumeSequence(ResumeSequence resumeSequence)
+    {
+        this.currentInterrupt = null;
+    }
+
+    /**
+     * Determine if the sequence is currently interrupted.
+     */
+    public boolean isInterrupted()
+    {
+        return this.currentInterrupt != null;
+    }
+
+    /**
+     * Determine if the players sequence is currently being interrupted by a given type.
+     */
+    public boolean isInterruptedWith(InterruptType type)
+    {
+        if (this.currentInterrupt == null)
+        {
+            return false;
+        }
+
+        return this.currentInterrupt == type;
+    }
+
+    /**
+     * Determine if the player is performing a specific activity.
+     */
+    public boolean isPerformingActivity(TemporossActivity activity)
+    {
+        return this.getCurrentActivity() == activity;
+    }
+
+    private void updateTemporossEvent(int temporossEvent)
+    {
+        this.currentTemporossEvent = temporossEvent;
+        this.eventBus.post(new TemporossEvent(temporossEvent));
     }
 
     /**

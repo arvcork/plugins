@@ -2,6 +2,7 @@ package com.arvcork.managers;
 
 import com.arvcork.TemporossActivity;
 import com.arvcork.TemporossSoloHelperPlugin;
+import com.arvcork.events.TemporossEvent;
 import lombok.Getter;
 import lombok.Setter;
 import net.runelite.api.AnimationID;
@@ -12,6 +13,7 @@ import net.runelite.api.events.GameTick;
 import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetID;
+import net.runelite.client.eventbus.EventBus;
 import net.runelite.client.eventbus.Subscribe;
 
 import javax.inject.Inject;
@@ -34,9 +36,10 @@ public class TemporossStateManager {
     @Inject
     public TemporossSoloHelperPlugin plugin;
 
-    @Getter
-    @Setter
-    private String currentActivity;
+    @Inject
+    private EventBus eventBus;
+
+    private boolean hasTriggeredStormEvent = false;
 
     @Subscribe
     public void onGameTick(GameTick event)
@@ -46,16 +49,20 @@ public class TemporossStateManager {
             return;
         }
 
-        essence = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_ESSENCE_WIDGET_ID);
-        stormIntensity = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_STORM_INTENSITY_WIDGET_ID);
-    }
+        this.essence = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_ESSENCE_WIDGET_ID);
+        this.stormIntensity = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_STORM_INTENSITY_WIDGET_ID);
 
-    /**
-     * Determine if a player is performing a specific activity.
-     */
-    public boolean playerPerformingActivity(String activity)
-    {
-        return Objects.equals(this.currentActivity, activity);
+        if (this.stormIntensity > 90 && ! this.hasTriggeredStormEvent)
+        {
+            this.hasTriggeredStormEvent = true;
+            this.eventBus.post(new TemporossEvent(TemporossEvent.STORM_EXCEEDED_MAXIMUM));
+        }
+
+        if (this.hasTriggeredStormEvent && this.stormIntensity < 90)
+        {
+            this.hasTriggeredStormEvent = false;
+            this.eventBus.post(new TemporossEvent(TemporossEvent.STORM_OK));
+        }
     }
 
     /**

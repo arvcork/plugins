@@ -4,7 +4,6 @@ import com.arvcork.events.TemporossActivityChanged;
 import com.arvcork.interrupts.*;
 import com.arvcork.managers.TemporossEquipmentManager;
 import com.arvcork.managers.TemporossStateManager;
-import com.arvcork.managers.TemporossSequenceManager;
 import com.arvcork.overlays.TemporossOverlay;
 import com.arvcork.overlays.TemporossUnkahOverlay;
 import com.google.inject.Provides;
@@ -48,12 +47,11 @@ public class TemporossSoloHelperPlugin extends Plugin
     };
 
     private static final Class<?>[] INTERRUPTS = new Class[]{
-            DoubleFishSpotInterrupt.class, StormIntensityInterrupt.class, TetherInterrupt.class
+            DoubleFishSpotInterrupt.class, TetherInterrupt.class
     };
 
     private static final Class<?>[] MANAGERS = new Class[]{
-            TemporossEquipmentManager.class, TemporossStateManager.class, TemporossSequenceManager.class,
-            TemporossSession.class
+            TemporossEquipmentManager.class, TemporossStateManager.class, TemporossSession.class
     };
 
     @Inject
