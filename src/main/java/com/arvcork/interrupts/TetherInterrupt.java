@@ -35,7 +35,7 @@ public class TetherInterrupt extends BaseInterrupt {
 
     @Override
     protected InterruptType getInterruptType() {
-        return InterruptType.TetherToTotemPole;
+        return InterruptType.TETHER_TO_TOTEM_POLE;
     }
 
     /**

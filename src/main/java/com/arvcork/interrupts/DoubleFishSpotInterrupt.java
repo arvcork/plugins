@@ -54,7 +54,7 @@ public class DoubleFishSpotInterrupt extends BaseInterrupt {
 
     @Override
     protected InterruptType getInterruptType() {
-        return InterruptType.DoubleFishingSpot;
+        return InterruptType.DOUBLE_FISHING_SPOT;
     }
 
     /**

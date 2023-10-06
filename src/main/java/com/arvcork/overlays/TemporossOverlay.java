@@ -38,29 +38,11 @@ public class TemporossOverlay extends Overlay {
 
         if (this.temporossSession.isInterrupted())
         {
-            OverlayUtils.renderErrorMessage(panelComponent, this.parseInterruptTypeToString(this.temporossSession.getCurrentInterrupt()));
+            OverlayUtils.renderErrorMessage(panelComponent, this.temporossSession.getCurrentInterrupt().toString());
         } else {
             OverlayUtils.renderSuccessMessage(panelComponent, "Waiting for a interrupt to happen.");
         }
 
         return panelComponent.render(graphics);
-    }
-
-    /**
-     * Convert the interrupt type to a string for the player to be notified of.
-     */
-    private String parseInterruptTypeToString(InterruptType interruptType)
-    {
-        if (interruptType == InterruptType.DoubleFishingSpot)
-        {
-            return "Fish at the double fishing spot";
-        }
-
-        if (interruptType == InterruptType.TetherToTotemPole)
-        {
-            return "Tether to the Totem Pole";
-        }
-
-        return null;
     }
 }

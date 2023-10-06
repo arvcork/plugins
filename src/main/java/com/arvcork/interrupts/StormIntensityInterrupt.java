@@ -17,7 +17,7 @@ public class StormIntensityInterrupt extends BaseInterrupt {
 
     @Override
     protected InterruptType getInterruptType() {
-        return InterruptType.StormIntensityWarning;
+        return InterruptType.STORM_INTENSITY_WARNING;
     }
 
     @Subscribe

@@ -3,6 +3,7 @@ package com.arvcork.interrupts;
 import com.arvcork.TemporossSession;
 import com.arvcork.events.InterruptSequence;
 import com.arvcork.events.ResumeSequence;
+import net.runelite.client.Notifier;
 import net.runelite.client.eventbus.EventBus;
 
 import javax.inject.Inject;
@@ -12,14 +13,18 @@ public abstract class BaseInterrupt {
     private EventBus eventBus;
 
     @Inject
+    private Notifier notifier;
+
+    @Inject
     protected TemporossSession temporossSession;
 
     protected void interrupt()
     {
         if (this.shouldInterrupt())
         {
-            // TODO: Check if the notifications are enabled, if so then fire off the to the user.
-            this.eventBus.post(new InterruptSequence(this.getInterruptType()));
+            InterruptType interruptType = this.getInterruptType();
+            this.notifier.notify(interruptType.toString()); // TODO: Only do this if enabled in the configuration.
+            this.eventBus.post(new InterruptSequence(interruptType));
         }
     }
 
