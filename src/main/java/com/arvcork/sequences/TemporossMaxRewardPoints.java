@@ -3,8 +3,16 @@ package com.arvcork.sequences;
 import com.arvcork.TemporossSoloHelperPlugin;
 import com.arvcork.actions.*;
 import net.runelite.api.coords.LocalPoint;
+import net.runelite.client.eventbus.EventBus;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+@Singleton
 public class TemporossMaxRewardPoints {
+    @Inject
+    private EventBus eventBus;
+
     public static Action[] Actions = {
             new FishingAction(16),
             new CookingAction(16),

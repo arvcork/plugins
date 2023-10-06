@@ -29,6 +29,9 @@ public abstract class BaseInterrupt {
             InterruptType interruptType = this.getInterruptType();
             this.notifier.notify(interruptType.toString()); // TODO: Only do this if enabled in the configuration.
             this.eventBus.post(new InterruptSequence(interruptType));
+        } else {
+            // Fallback for a "just in case" scenario.
+            this.clear();
         }
     }
 

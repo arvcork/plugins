@@ -1,6 +1,7 @@
 package com.arvcork.managers;
 
 import com.arvcork.TemporossSoloHelperPlugin;
+import com.arvcork.events.TemporossEssenceDepleted;
 import com.arvcork.events.TemporossEvent;
 import com.arvcork.events.TemporossEnergyDepleted;
 import lombok.Getter;
@@ -36,6 +37,9 @@ public class TemporossStateManager {
     @Inject
     private EventBus eventBus;
 
+    @Getter
+    private int currentDamageDealt = 0;
+
     private boolean hasTriggeredStormEvent = false;
 
     @Subscribe
@@ -47,14 +51,22 @@ public class TemporossStateManager {
         }
 
         int energy = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_ENERGY_WIDGET_ID);
+        int essence = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_ESSENCE_WIDGET_ID);
 
         if (energy < this.energy)
         {
             this.eventBus.post(new TemporossEnergyDepleted(energy));
         }
 
+        if (essence < this.essence)
+        {
+            this.eventBus.post(new TemporossEssenceDepleted(essence));
+        }
+
+        this.currentDamageDealt = 100 - essence;
+
         this.energy = energy;
-        this.essence = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_ESSENCE_WIDGET_ID);
+        this.essence = essence;
         this.stormIntensity = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_STORM_INTENSITY_WIDGET_ID);
 
         if (this.stormIntensity > 90 && ! this.hasTriggeredStormEvent)

@@ -6,7 +6,7 @@ public class FishingAction extends Action {
     public FishingAction(int requiredAmount)
     {
         super(
-                "Catch x Raw Harpoon Fish",
+                "Catch %s Raw Harpoon Fish",
                 ItemID.RAW_HARPOONFISH,
                 requiredAmount,
                 ActionSearchableType.Inventory

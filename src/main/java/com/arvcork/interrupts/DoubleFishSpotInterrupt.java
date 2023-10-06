@@ -48,7 +48,7 @@ public class DoubleFishSpotInterrupt extends BaseInterrupt {
             return;
         }
 
-        if (event.getActivity() == TemporossActivity.Idle && this.isSpawned)
+        if (this.isSpawned)
         {
             this.interrupt();
         }
@@ -75,14 +75,7 @@ public class DoubleFishSpotInterrupt extends BaseInterrupt {
 
         if (! (currentAction instanceof FishingAction))
         {
-            // If the current action does not require fish, do not interrupt the player.
-            return false;
-        }
-
-        int sourcedItems = itemContainer.count(currentAction.getSearchableId());
-
-        if ((currentAction.getRequiredAmount() - 3) > sourcedItems)
-        {
+            // If the current action does not require fish, do not interrupt the player, clear the interrupt if it is active.
             return false;
         }
 

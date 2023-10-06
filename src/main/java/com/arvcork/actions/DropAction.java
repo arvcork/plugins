@@ -7,7 +7,7 @@ import net.runelite.api.coords.WorldPoint;
 public class DropAction extends Action {
     public DropAction(int requiredAmount, LocalPoint dropLocation) {
         super(
-                "Drop x Harpoonfish",
+                "Drop %s Harpoonfish",
                 ItemID.HARPOONFISH,
                 requiredAmount,
                 ActionSearchableType.Ground,

@@ -6,7 +6,7 @@ import net.runelite.api.coords.LocalPoint;
 public class PickupAction extends Action {
     public PickupAction(int requiredAmount, LocalPoint dropLocation) {
         super(
-                "Pickup x Harpoonfish",
+                "Pickup %s Harpoonfish",
                 ItemID.HARPOONFISH,
                 requiredAmount,
                 ActionSearchableType.Inventory,

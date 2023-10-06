@@ -4,10 +4,7 @@ import com.arvcork.TemporossActivity;
 import com.arvcork.TemporossSession;
 import com.arvcork.TemporossSoloHelperPlugin;
 import com.arvcork.actions.*;
-import com.arvcork.events.InterruptSequence;
-import com.arvcork.events.ResumeSequence;
-import com.arvcork.events.TemporossActivityChanged;
-import com.arvcork.events.TemporossEnergyDepleted;
+import com.arvcork.events.*;
 import com.arvcork.interrupts.InterruptType;
 import com.arvcork.sequences.TemporossMaxRewardPoints;
 import lombok.Getter;
@@ -53,16 +50,12 @@ public class TemporossSequenceManager {
     @Subscribe
     public void onGameStateChanged(GameStateChanged event)
     {
-        log.debug("I AM HERE");
         if (event.getGameState() == GameState.LOGGED_IN)
         {
             int currentRegionId = WorldPoint.fromLocalInstance(this.client, client.getLocalPlayer().getLocalLocation()).getRegionID();
 
-            log.debug("Current region: " + currentRegionId);
-
             if (currentRegionId == TemporossSoloHelperPlugin.TEMPOROSS_REGION_ID)
             {
-                log.debug("Within region.");
                 this.initialize();
             }
         }
@@ -85,40 +78,63 @@ public class TemporossSequenceManager {
     {
         if (this.currentAction instanceof CookingAction || this.currentAction instanceof FishingAction || this.currentAction instanceof PickupAction)
         {
-            if (this.hasCompletedCurrentActionViaInventory())
-            {
-                this.advance();
-            }
+            this.processInventory();
         }
 
         if (this.currentAction instanceof LoadAction)
         {
-            if (this.hasCompletedLoadingEvent())
-            {
-                this.advance();
-            }
+            this.processLoadAction();
         }
+
+        this.checkForCompletion();
     }
 
     @Subscribe
     private void onItemSpawned(ItemSpawned event)
     {
-        if (this.hasCompletedActionViaGround(event))
+        if (this.getCurrentAction() == null)
         {
-            this.advance();
+            return;
         }
+
+        if (this.getCurrentAction().getLocalPoint() == null)
+        {
+            return;
+        }
+
+        if (this.getCurrentAction().getSearchableType() != ActionSearchableType.Ground)
+        {
+            return;
+        }
+
+        int groundAmount = 0;
+        final LocalPoint expectedLocation = this.getCurrentAction().getLocalPoint();
+        final LocalPoint droppedLocation = event.getTile().getLocalLocation();
+
+        for (TileItem groundItem : event.getTile().getGroundItems())
+        {
+            if (groundItem.getId() == this.getCurrentAction().getSearchableId() && expectedLocation.equals(droppedLocation))
+            {
+                groundAmount += groundItem.getQuantity();
+            }
+        }
+
+        this.currentAction.setCurrentProgress(groundAmount);
+
+        this.checkForCompletion();
     }
 
     @Subscribe
-    private void onTemporossEnergyDepleted(TemporossEnergyDepleted event)
+    private void onTemporossEssenceDepleted(TemporossEssenceDepleted event)
     {
         if (this.currentAction instanceof AttackAction)
         {
-            if (this.hasCompletedCurrentActionViaDamage())
-            {
-                this.advance();
-            }
+            this.currentAction.setCurrentProgress(
+                this.temporossStateManager.getCurrentDamageDealt()
+            );
         }
+
+        this.checkForCompletion();
     }
 
     public boolean isInterruptedWith(InterruptType type)
@@ -137,31 +153,34 @@ public class TemporossSequenceManager {
     }
 
     /**
+     * Check if the current action has been completed.
+     */
+    private void checkForCompletion()
+    {
+        if (this.currentAction != null && this.currentAction.isCompleted())
+        {
+            this.advance();
+        }
+    }
+
+    /**
      * Advance to the next action in the sequence.
      */
     private void advance()
     {
-        this.currentProgress = 0;
         this.currentActionIndex++;
-        this.currentAction = this.actions[this.currentActionIndex];
-    }
 
-    /**
-     * Determine if the player has dealt enough damage to Tempoross.
-     */
-    private boolean hasCompletedCurrentActionViaDamage()
-    {
-        this.currentProgress = this.getTotalDamageDone();
+        if (this.currentActionIndex <= this.actions.length)
+        {
+            this.currentAction = this.actions[this.currentActionIndex];
 
-        return this.getTotalDamageDone() >= this.currentAction.getRequiredAmount();
-    }
-
-    /**
-     * Get the total damage done to Tempoross.
-     */
-    private int getTotalDamageDone()
-    {
-        return 100 - this.temporossStateManager.getEssence();
+            if (this.currentAction instanceof AttackAction)
+            {
+                this.currentAction.setCurrentProgress(
+                        this.temporossStateManager.getCurrentDamageDealt()
+                );
+            }
+        }
     }
 
     /**
@@ -182,48 +201,33 @@ public class TemporossSequenceManager {
     /**
      * Determine if the player has completed the current action by looking in the inventory.
      */
-    private boolean hasCompletedCurrentActionViaInventory()
+    private void processInventory()
     {
-        this.currentProgress = this.getCurrentInventoryQuantity();
-
-        return this.getCurrentInventoryQuantity() == this.currentAction.getRequiredAmount();
+        this.currentAction.setCurrentProgress(
+            this.getCurrentInventoryQuantity()
+        );
     }
 
     /**
-     * Determine if the player has completed the loading event in the cannon.
+     * Get the number of items in the inventory based off the current action.
      */
-    private boolean hasCompletedLoadingEvent()
+    private void processLoadAction()
     {
-        this.currentProgress = this.temporossSession.getActivityLoadedFish();
+        ItemContainer inventory = client.getItemContainer(InventoryID.INVENTORY);
 
-        return this.currentProgress == this.currentAction.getRequiredAmount();
-    }
-
-    /**
-     * Determine if the player has dropped all required items on the expected tile from the current action.
-     */
-    private boolean hasCompletedActionViaGround(ItemSpawned event)
-    {
-        if (this.currentAction.getLocalPoint() == null)
+        if (inventory == null)
         {
-            return false;
+            return;
         }
 
-        int groundAmount = 0;
-        final LocalPoint expectedLocation = this.currentAction.getLocalPoint();
-        final LocalPoint droppedLocation = event.getTile().getLocalLocation();
-
-        for (TileItem groundItem : event.getTile().getGroundItems())
+        if (this.temporossSession.isPerformingActivity(TemporossActivity.StockingCannon))
         {
-            if (groundItem.getId() == this.currentAction.getSearchableId() && expectedLocation.equals(droppedLocation))
-            {
-                groundAmount += groundItem.getQuantity();
-            }
+            int currentProgress = this.currentAction.getCurrentProgress();
+
+            this.currentAction.setCurrentProgress(
+                currentProgress + 1
+            );
         }
-
-        this.currentProgress = groundAmount;
-
-        return groundAmount == this.currentAction.getRequiredAmount();
     }
 
     public boolean isInterrupted()

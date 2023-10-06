@@ -6,7 +6,7 @@ public class CookingAction extends Action {
     public CookingAction(int requiredAmount)
     {
         super(
-                "Cook x Harpoonfish",
+                "Cook %s Harpoonfish",
                 ItemID.HARPOONFISH,
                 requiredAmount,
                 ActionSearchableType.Inventory

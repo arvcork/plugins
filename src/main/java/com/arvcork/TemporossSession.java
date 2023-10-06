@@ -49,7 +49,9 @@ public class TemporossSession {
     @Getter
     private int activityLoadedFish = 0;
 
-    private int startActivityCookedFish = 0;
+    private int loadedFishCount = 0;
+
+    private int firedFishCount = 0;
 
     private TemporossActivity previousActivity = TemporossActivity.Idle;
 
@@ -68,25 +70,28 @@ public class TemporossSession {
 
         if (this.isPerformingActivity(TemporossActivity.StockingCannon))
         {
-            this.activityLoadedFish = this.startActivityCookedFish - this.currentlyCookedFish;
+            this.loadedFishCount += 1;
         }
     }
 
+    /**
+     * When tempoross loses energy, that means that the cannon has fired a fish so lets decrement it.
+     */
     @Subscribe
     private void onTemporossEnergyDepleted(TemporossEnergyDepleted event)
     {
-        this.realLoadedFish--;
+        if (this.loadedFishCount > 0)
+        {
+            this.firedFishCount += 1;
+        }
     }
 
-    @Subscribe
-    private void onTemporossActivityChanged(TemporossActivityChanged event)
+    /**
+     * Get the current number of fish that is loaded into the cannon.
+     */
+    public int getCurrentlyLoadedFish()
     {
-        ItemContainer playerInventory = this.client.getItemContainer(InventoryID.INVENTORY);
-
-        if (playerInventory != null)
-        {
-            this.startActivityCookedFish = this.client.getItemContainer(InventoryID.INVENTORY).count(ItemID.HARPOONFISH);
-        }
+        return Math.abs(this.loadedFishCount - this.firedFishCount);
     }
 
     /**
