@@ -1,16 +1,11 @@
 package com.arvcork.managers;
 
-import com.arvcork.TemporossActivity;
 import com.arvcork.TemporossSoloHelperPlugin;
 import com.arvcork.events.TemporossEvent;
+import com.arvcork.events.TemporossEnergyDepleted;
 import lombok.Getter;
-import lombok.Setter;
-import net.runelite.api.AnimationID;
 import net.runelite.api.Client;
-import net.runelite.api.TileObject;
-import net.runelite.api.events.AnimationChanged;
 import net.runelite.api.events.GameTick;
-import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetID;
 import net.runelite.client.eventbus.EventBus;
@@ -18,7 +13,6 @@ import net.runelite.client.eventbus.Subscribe;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -29,6 +23,9 @@ public class TemporossStateManager {
 
     @Getter
     private int stormIntensity;
+
+    @Getter
+    private int energy;
 
     @Inject
     public Client client;
@@ -44,11 +41,19 @@ public class TemporossStateManager {
     @Subscribe
     public void onGameTick(GameTick event)
     {
-        if (! plugin.isInTemporossArea())
+        if (! plugin.isWithinTemporossRegion())
         {
             return;
         }
 
+        int energy = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_ENERGY_WIDGET_ID);
+
+        if (energy < this.energy)
+        {
+            this.eventBus.post(new TemporossEnergyDepleted(energy));
+        }
+
+        this.energy = energy;
         this.essence = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_ESSENCE_WIDGET_ID);
         this.stormIntensity = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_STORM_INTENSITY_WIDGET_ID);
 

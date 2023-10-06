@@ -1,6 +1,9 @@
 package com.arvcork.interrupts;
 
 import com.arvcork.TemporossActivity;
+import com.arvcork.actions.Action;
+import com.arvcork.actions.ActionSearchableType;
+import com.arvcork.actions.FishingAction;
 import com.arvcork.events.TemporossActivityChanged;
 import com.arvcork.events.TemporossEvent;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +22,6 @@ public class DoubleFishSpotInterrupt extends BaseInterrupt {
     private Client client;
 
     private boolean isSpawned;
-
 
     @Subscribe
     public void onTemporossEvent(TemporossEvent event)
@@ -64,9 +66,22 @@ public class DoubleFishSpotInterrupt extends BaseInterrupt {
     protected boolean shouldInterrupt()
     {
         ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
+        Action currentAction = this.temporossSequenceManager.getCurrentAction();
 
-        // If there's less than 3 inventory spaces left, there's no point in interrupting the player.
-        if (itemContainer != null && itemContainer.count() > 25)
+        if (currentAction == null)
+        {
+            return false;
+        }
+
+        if (! (currentAction instanceof FishingAction))
+        {
+            // If the current action does not require fish, do not interrupt the player.
+            return false;
+        }
+
+        int sourcedItems = itemContainer.count(currentAction.getSearchableId());
+
+        if ((currentAction.getRequiredAmount() - 3) > sourcedItems)
         {
             return false;
         }

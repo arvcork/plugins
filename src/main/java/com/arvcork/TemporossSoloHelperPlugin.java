@@ -3,6 +3,7 @@ package com.arvcork;
 import com.arvcork.events.TemporossActivityChanged;
 import com.arvcork.interrupts.*;
 import com.arvcork.managers.TemporossEquipmentManager;
+import com.arvcork.managers.TemporossSequenceManager;
 import com.arvcork.managers.TemporossStateManager;
 import com.arvcork.overlays.TemporossOverlay;
 import com.arvcork.overlays.TemporossUnkahOverlay;
@@ -10,6 +11,7 @@ import com.google.inject.Provides;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -27,9 +29,10 @@ import net.runelite.client.ui.overlay.OverlayManager;
 @PluginDescriptor(
         name = "Tempoross Solo Helper"
 )
-@Singleton
 public class TemporossSoloHelperPlugin extends Plugin
 {
+    public static final int TEMPOROSS_ENERGY_WIDGET_ID = 35;
+
     public static final int TEMPOROSS_ESSENCE_WIDGET_ID = 45;
 
     public static final int TEMPOROSS_STORM_INTENSITY_WIDGET_ID = 55;
@@ -51,7 +54,7 @@ public class TemporossSoloHelperPlugin extends Plugin
     };
 
     private static final Class<?>[] MANAGERS = new Class[]{
-            TemporossEquipmentManager.class, TemporossStateManager.class, TemporossSession.class
+            TemporossEquipmentManager.class, TemporossStateManager.class, TemporossSequenceManager.class, TemporossSession.class
     };
 
     @Inject
@@ -71,6 +74,12 @@ public class TemporossSoloHelperPlugin extends Plugin
 
     @Inject
     private EventBus eventBus;
+
+    @Getter
+    private boolean withinTemporossRegion = false;
+
+    @Getter
+    private boolean withinUnkahRegion = false;
 
     @Provides
     TemporossSoloHelperConfig provideConfig(ConfigManager configManager)
@@ -113,48 +122,42 @@ public class TemporossSoloHelperPlugin extends Plugin
 
         if (event.getGameState() == GameState.LOGGED_IN)
         {
-            if (this.isInUnkahRegion())
+            var currentRegionId = WorldPoint.fromLocalInstance(this.client, client.getLocalPlayer().getLocalLocation()).getRegionID();
+
+            if (this.isInUnkahRegion(currentRegionId))
             {
+                this.withinUnkahRegion = true;
                 overlayManager.remove(temporossOverlay);
                 overlayManager.add(temporossUnkahOverlay);
                 return;
             }
 
-            if (this.isInTemporossArea())
+            if (this.isInTemporossArea(currentRegionId))
             {
+                this.withinTemporossRegion = true;
                 overlayManager.add(temporossOverlay);
+
+                return;
             }
+
+            this.withinUnkahRegion = false;
+            this.withinTemporossRegion = false;
         }
     }
 
     /**
      * Determine if the player is within the Tempoross region.
      */
-    public boolean isInTemporossArea()
+    public boolean isInTemporossArea(int regionId)
     {
-        return isInRegion(TEMPOROSS_REGION_ID);
+        return regionId == TEMPOROSS_REGION_ID;
     }
 
     /**
      * Determine if the player is within the Unkah region.
      */
-    public boolean isInUnkahRegion()
+    public boolean isInUnkahRegion(int regionId)
     {
-        return isInRegion(UNKAH_REGION_ID);
-    }
-
-    /**
-     * Determine if the player is within a specified region.
-     */
-    private boolean isInRegion(int regionId)
-    {
-        if (client.getGameState() != GameState.LOGGED_IN)
-        {
-            return false;
-        }
-
-        int currentRegionId = WorldPoint.fromLocalInstance(client, client.getLocalPlayer().getLocalLocation()).getRegionID();
-
-        return currentRegionId == regionId;
+        return regionId == UNKAH_REGION_ID;
     }
 }

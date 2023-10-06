@@ -1,9 +1,6 @@
 package com.arvcork;
 
-import com.arvcork.events.InterruptSequence;
-import com.arvcork.events.ResumeSequence;
-import com.arvcork.events.TemporossActivityChanged;
-import com.arvcork.events.TemporossEvent;
+import com.arvcork.events.*;
 import com.arvcork.interrupts.InterruptType;
 import com.arvcork.utils.NpcUtils;
 import lombok.Getter;
@@ -40,7 +37,57 @@ public class TemporossSession {
     @Getter
     private int currentTemporossEvent;
 
+    @Getter
+    private int currentlyCookedFish = 0;
+
+    @Getter
+    private int currentlyRawFish = 0;
+
+    @Getter
+    private int realLoadedFish = 0;
+
+    @Getter
+    private int activityLoadedFish = 0;
+
+    private int startActivityCookedFish = 0;
+
     private TemporossActivity previousActivity = TemporossActivity.Idle;
+
+    @Subscribe
+    private void onItemContainerChanged(ItemContainerChanged event)
+    {
+        ItemContainer item = this.client.getItemContainer(InventoryID.INVENTORY);
+
+        if (item == null)
+        {
+            return;
+        }
+
+        this.currentlyRawFish = item.count(ItemID.RAW_HARPOONFISH);
+        this.currentlyCookedFish = item.count(ItemID.HARPOONFISH);
+
+        if (this.isPerformingActivity(TemporossActivity.StockingCannon))
+        {
+            this.activityLoadedFish = this.startActivityCookedFish - this.currentlyCookedFish;
+        }
+    }
+
+    @Subscribe
+    private void onTemporossEnergyDepleted(TemporossEnergyDepleted event)
+    {
+        this.realLoadedFish--;
+    }
+
+    @Subscribe
+    private void onTemporossActivityChanged(TemporossActivityChanged event)
+    {
+        ItemContainer playerInventory = this.client.getItemContainer(InventoryID.INVENTORY);
+
+        if (playerInventory != null)
+        {
+            this.startActivityCookedFish = this.client.getItemContainer(InventoryID.INVENTORY).count(ItemID.HARPOONFISH);
+        }
+    }
 
     /**
      * Parse the chat message to determine what action the player is performing.
@@ -177,26 +224,6 @@ public class TemporossSession {
         }
     }
 
-    @Subscribe
-    private void onInterruptSequence(InterruptSequence event)
-    {
-        this.currentInterrupt = event.getType();
-    }
-
-    @Subscribe
-    private void onResumeSequence(ResumeSequence resumeSequence)
-    {
-        this.currentInterrupt = null;
-    }
-
-    /**
-     * Determine if the sequence is currently interrupted.
-     */
-    public boolean isInterrupted()
-    {
-        return this.currentInterrupt != null;
-    }
-
     /**
      * Determine if the players sequence is currently being interrupted by a given type.
      */
@@ -216,6 +243,14 @@ public class TemporossSession {
     public boolean isPerformingActivity(TemporossActivity activity)
     {
         return this.getCurrentActivity() == activity;
+    }
+
+    /**
+     * Determine if the player was performing an activity.
+     */
+    public boolean wasPerformingActivity(TemporossActivity activity)
+    {
+        return this.previousActivity == activity;
     }
 
     private void updateTemporossEvent(int temporossEvent)

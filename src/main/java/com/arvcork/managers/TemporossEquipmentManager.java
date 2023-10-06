@@ -28,7 +28,7 @@ public class TemporossEquipmentManager {
     @Subscribe
     public void onGameStateChanged(GameStateChanged event)
     {
-        if (event.getGameState() == GameState.LOGGED_IN && plugin.isInUnkahRegion())
+        if (event.getGameState() == GameState.LOGGED_IN && plugin.isWithinUnkahRegion())
         {
             processItemContainers();
         }
@@ -37,7 +37,7 @@ public class TemporossEquipmentManager {
     @Subscribe
     public void onItemContainerChanged(ItemContainerChanged event)
     {
-        if (plugin.isInUnkahRegion())
+        if (plugin.isWithinUnkahRegion())
         {
             processItemContainers();
         }

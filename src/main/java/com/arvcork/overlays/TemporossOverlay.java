@@ -2,9 +2,11 @@ package com.arvcork.overlays;
 
 import com.arvcork.TemporossSession;
 import com.arvcork.interrupts.InterruptType;
+import com.arvcork.managers.TemporossSequenceManager;
 import com.arvcork.utils.OverlayUtils;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayPosition;
+import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.PanelComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 
@@ -14,6 +16,9 @@ import java.awt.*;
 public class TemporossOverlay extends Overlay {
     @Inject
     private TemporossSession temporossSession;
+
+    @Inject
+    private TemporossSequenceManager temporossSequenceManager;
 
     private final PanelComponent panelComponent = new PanelComponent();
 
@@ -36,12 +41,61 @@ public class TemporossOverlay extends Overlay {
                 new Dimension(graphics.getFontMetrics().stringWidth(OVERLAY_TITLE) + 150, 0)
         );
 
-        if (this.temporossSession.isInterrupted())
+        if (this.temporossSequenceManager.getCurrentAction() == null)
         {
-            OverlayUtils.renderErrorMessage(panelComponent, this.temporossSession.getCurrentInterrupt().toString());
-        } else {
-            OverlayUtils.renderSuccessMessage(panelComponent, "Waiting for a interrupt to happen.");
+            OverlayUtils.renderSuccessMessage(panelComponent, "Loading...");
+
+            return panelComponent.render(graphics);
         }
+
+        if (this.temporossSequenceManager.isInterrupted())
+        {
+            OverlayUtils.renderErrorMessage(panelComponent, this.temporossSequenceManager.getInterrupt().toString());
+        } else {
+            OverlayUtils.renderSuccessMessage(panelComponent, this.temporossSequenceManager.getCurrentAction().getDescription());
+        }
+
+        panelComponent.getChildren().add(
+                LineComponent.builder()
+                        .left("Current raw:")
+                        .right(Integer.toString(this.temporossSession.getCurrentlyRawFish()))
+                        .build()
+        );
+
+        panelComponent.getChildren().add(
+                LineComponent.builder()
+                        .left("Current cooked:")
+                        .right(Integer.toString(this.temporossSession.getCurrentlyCookedFish()))
+                        .build()
+        );
+
+        panelComponent.getChildren().add(
+                LineComponent.builder()
+                        .left("Current loaded this activity:")
+                        .right(Integer.toString(this.temporossSession.getActivityLoadedFish()))
+                        .build()
+        );
+
+        panelComponent.getChildren().add(
+                LineComponent.builder()
+                        .left("Current loaded overall:")
+                        .right(Integer.toString(this.temporossSession.getRealLoadedFish()))
+                        .build()
+        );
+
+        panelComponent.getChildren().add(
+                LineComponent.builder()
+                        .left("Activity:")
+                        .right(this.temporossSession.getCurrentActivity().toString())
+                        .build()
+        );
+
+        panelComponent.getChildren().add(
+                LineComponent.builder()
+                        .left("Current progress:")
+                        .right(this.temporossSequenceManager.getCurrentProgress() + "/" + this.temporossSequenceManager.getCurrentAction().getRequiredAmount())
+                        .build()
+        );
 
         return panelComponent.render(graphics);
     }

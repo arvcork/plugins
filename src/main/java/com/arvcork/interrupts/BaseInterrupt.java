@@ -3,6 +3,7 @@ package com.arvcork.interrupts;
 import com.arvcork.TemporossSession;
 import com.arvcork.events.InterruptSequence;
 import com.arvcork.events.ResumeSequence;
+import com.arvcork.managers.TemporossSequenceManager;
 import net.runelite.client.Notifier;
 import net.runelite.client.eventbus.EventBus;
 
@@ -18,6 +19,9 @@ public abstract class BaseInterrupt {
     @Inject
     protected TemporossSession temporossSession;
 
+    @Inject
+    protected TemporossSequenceManager temporossSequenceManager;
+
     protected void interrupt()
     {
         if (this.shouldInterrupt())
@@ -30,7 +34,7 @@ public abstract class BaseInterrupt {
 
     protected boolean isInterrupted()
     {
-        return this.temporossSession.isInterruptedWith(this.getInterruptType());
+        return this.temporossSequenceManager.isInterruptedWith(this.getInterruptType());
     }
 
     protected void clear()
