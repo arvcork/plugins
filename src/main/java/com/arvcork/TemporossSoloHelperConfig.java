@@ -15,4 +15,11 @@ public interface TemporossSoloHelperConfig extends Config {
     {
         return true;
     }
+
+    @ConfigItem(
+            keyName = "tetherGracePeriod",
+            name = "Tether Grace Period",
+            description = "How long to wait before showing the Tethering warning."
+    )
+    default int tetherWarning() { return 1; }
 }

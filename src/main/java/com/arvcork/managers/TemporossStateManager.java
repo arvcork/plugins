@@ -1,20 +1,27 @@
 package com.arvcork.managers;
 
+import com.arvcork.TemporossActivity;
 import com.arvcork.TemporossSoloHelperPlugin;
 import lombok.Getter;
+import lombok.Setter;
+import net.runelite.api.AnimationID;
 import net.runelite.api.Client;
+import net.runelite.api.TileObject;
+import net.runelite.api.events.AnimationChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetID;
 import net.runelite.client.eventbus.Subscribe;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Singleton
-public class TemporossManager {
+public class TemporossStateManager {
     @Getter
     private int essence;
 
@@ -27,6 +34,10 @@ public class TemporossManager {
     @Inject
     public TemporossSoloHelperPlugin plugin;
 
+    @Getter
+    @Setter
+    private String currentActivity;
+
     @Subscribe
     public void onGameTick(GameTick event)
     {
@@ -37,6 +48,14 @@ public class TemporossManager {
 
         essence = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_ESSENCE_WIDGET_ID);
         stormIntensity = parseTemporossStatusValue(TemporossSoloHelperPlugin.TEMPOROSS_STORM_INTENSITY_WIDGET_ID);
+    }
+
+    /**
+     * Determine if a player is performing a specific activity.
+     */
+    public boolean playerPerformingActivity(String activity)
+    {
+        return Objects.equals(this.currentActivity, activity);
     }
 
     /**
